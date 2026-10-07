@@ -74,7 +74,7 @@ class NNAutoencoder:
             loss = ((self.dec(self.enc(Xt)) - Xt) ** 2).mean()
             loss.backward()
             self.opt.step()
-        self.last_loss = float(loss)
+        self.last_loss = float(loss.detach())
         return self
 
     @torch.no_grad()
@@ -130,5 +130,5 @@ def train_svf(net, Z_list, Y_list, lam, epochs, opt):
         loss.backward()
         opt.step()
         if epoch % 100 == 0 or epoch == epochs - 1:
-            history.append((float(rec), float(pred)))
+            history.append((float(rec.detach()), float(pred.detach())))
     return history
