@@ -52,6 +52,11 @@ class SVFConfig:
     epochs_refit: int = 500   # epochs at later iterations (models are warm-started)
     warm_start: bool = True   # False = re-initialize every iteration (old behaviour)
     h_box_expansion: float = 0.1  # candidate box = observed h range widened by 10% per side
+    # How the next design is chosen:
+    #   "decode": search in h, then decode h* -> z~ -> x   (the proposal; method "svf")
+    #   "encode": search in x-box, map candidates to h, score them with the GP in h
+    #             (no decoder, no clipping; method "svf_x")
+    proposal: str = "decode"
 
 
 @dataclass

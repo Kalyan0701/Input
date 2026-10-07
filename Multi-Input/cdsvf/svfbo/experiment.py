@@ -5,6 +5,7 @@ Fairness: every method starts from the SAME initial data, searches the SAME boxe
 the SAME GP / EI / candidate code. Each method draws its own noise from its own stream.
 """
 import time
+from dataclasses import replace
 
 from .baselines import run_independent_bo, run_random
 from .simulator import FacilitySimulator
@@ -38,9 +39,10 @@ def run_one(cfg, seed):
             data, diag = run_random(sim, init, cfg.bo.budget, rng), None
         elif m == "indep":
             data, diag = run_independent_bo(sim, init, cfg.bo, rng, seed), None
-        elif m == "svf":
+        elif m in ("svf", "svf_x"):
             from .svf_bo import run_svf_bo  # imports torch only when SVF is run
-            data, diag = run_svf_bo(sim, init, cfg.svf, cfg.bo, rng, seed)
+            svf_cfg = replace(cfg.svf, proposal="encode") if m == "svf_x" else cfg.svf
+            data, diag = run_svf_bo(sim, init, svf_cfg, cfg.bo, rng, seed)
         else:
             raise ValueError(f"unknown method: {m}")
         out["methods"][m] = {"data": data, "diag": diag, "seconds": time.time() - t0}

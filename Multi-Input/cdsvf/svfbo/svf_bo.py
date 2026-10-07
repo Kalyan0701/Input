@@ -10,6 +10,10 @@ with the bugs fixed. Each BO iteration:
 
 Task 3 (Bayes-factor model comparison) is NOT part of Step 1.
 
+Variant (svf_cfg.proposal == "encode", method "svf_x"): identical Tasks 1-2 and GP in h, but
+step 5 is replaced by: draw candidate designs in the x-box (as independent BO does), map them
+to h with the trained encoders, and score them with the GP in h. No decoder, no clipping.
+
 Diagnostics stored per facility and iteration:
   cycle_err : || E(D(h*)) - h* || in standardized h units. Large values mean the point we
               ran is not the point the GP evaluated.
@@ -18,7 +22,7 @@ Diagnostics stored per facility and iteration:
 import numpy as np
 import torch
 
-from .gp import fit_gp, make_candidates, propose
+from .gp import expected_improvement, fit_gp, make_candidates, propose
 from .normalization import BoxScaler, Standardizer
 from .svf_model import NNAutoencoder, PCAEncoder, SVFNet, train_svf
 
@@ -113,10 +117,24 @@ class SVFBO:
         self.h_std = Standardizer().fit(np.vstack(H))
         Hs = [self.h_std.transform(h) for h in H]
 
-        # 4-5. M_cd per facility, EI in h, decode, clip
+        # 4-5. M_cd per facility: GP on (h, y), then pick the next design
         proposals, diag = [], []
         for l, d in enumerate(data):
             gp = fit_gp(Hs[l], d["y"], ard=self.bo.ard, seed=self.seed + t)
+
+            if c.proposal == "encode":
+                # No decoder: candidates live in the real design box (same generator as
+                # independent BO), are mapped to h, and the GP in h scores them.
+                d_l = X01[l].shape[1]
+                cands = make_candidates(np.zeros(d_l), np.ones(d_l), X01[l], d["y"],
+                                        self.bo.n_candidates, self.bo.local_frac,
+                                        self.bo.local_sigma, self.rng)
+                ei = expected_improvement(gp, self._encode(cands, l), d["y"].min(), self.bo.xi)
+                i = int(np.argmax(ei))
+                proposals.append(self.scalers[l].from_unit(cands[i]))
+                diag.append({"cycle_err": 0.0, "clipped": False, "ei": float(ei[i])})
+                continue
+
             lo, hi = Hs[l].min(axis=0), Hs[l].max(axis=0)
             pad = c.h_box_expansion * np.maximum(hi - lo, 1e-6)
             cands = make_candidates(lo - pad, hi + pad, Hs[l], d["y"], self.bo.n_candidates,

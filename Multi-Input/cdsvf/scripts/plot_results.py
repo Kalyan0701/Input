@@ -21,8 +21,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import wilcoxon
 
-COLORS = {"random": "tab:gray", "indep": "tab:blue", "svf": "tab:orange"}
-LABELS = {"random": "Random search", "indep": "Independent BO", "svf": "SVF-BO"}
+COLORS = {"random": "tab:gray", "indep": "tab:blue", "svf": "tab:orange", "svf_x": "tab:green"}
+LABELS = {"random": "Random search", "indep": "Independent BO", "svf": "SVF-BO (decode)",
+          "svf_x": "SVF-BO (no decode)"}
 
 
 def log_regret(f, n_init, y_star):
@@ -71,8 +72,12 @@ def summarize(key, runs, out_dir):
     plt.close(fig)
 
     print(f"\n=== {key}: final log10 regret, mean ± SE over {len(runs)} seeds ===")
-    print("facility".ljust(12) + "".join(LABELS.get(m, m).rjust(20) for m in methods)
-          + ("   p (SVF vs indep)" if {"svf", "indep"} <= set(methods) else ""))
+    svf_variants = [m for m in ("svf", "svf_x") if m in methods]
+    comp = ("indep" in methods) and bool(svf_variants)
+    header = "facility".ljust(12) + "".join(LABELS.get(m, m).rjust(20) for m in methods)
+    if comp:
+        header += "".join(f"  p({m} v indep)".rjust(20) for m in svf_variants)
+    print(header)
     for l in range(L + 1):
         name = f"{l} (d={d_l[l]})" if l < L else "mean"
         row = name.ljust(12)
@@ -82,22 +87,24 @@ def summarize(key, runs, out_dir):
             finals[m] = v
             se = v.std(ddof=1) / np.sqrt(len(v)) if len(v) > 1 else 0.0
             row += f"{v.mean():9.2f} ± {se:5.2f}".rjust(20)
-        if {"svf", "indep"} <= set(methods) and len(runs) >= 6:
-            try:
-                row += f"   {wilcoxon(finals['svf'], finals['indep']).pvalue:.3g}"
-            except ValueError:
-                row += "   n/a"
+        if comp and len(runs) >= 6:
+            for m in svf_variants:
+                try:
+                    row += f"{wilcoxon(finals[m], finals['indep']).pvalue:.3g}".rjust(20)
+                except ValueError:
+                    row += "n/a".rjust(20)
         print(row)
 
-    if "svf" in methods:
-        diags = [r["methods"]["svf"]["diag"] for r in runs]
-        cyc = np.array([[[f["cycle_err"] for f in it["facility"]] for it in d["per_iter"]]
-                        for d in diags])                       # (seeds, T, L)
-        clp = np.array([[[f["clipped"] for f in it["facility"]] for it in d["per_iter"]]
-                        for d in diags], dtype=float)
-        print(f"SVF q used: {sorted({d['q'] for d in diags})}")
-        print("SVF cycle error |E(D(h*)) - h*| per facility:", np.round(cyc.mean(axis=(0, 1)), 3))
-        print("SVF share of decoded designs clipped to box:", np.round(clp.mean(axis=(0, 1)), 3))
+    for m in svf_variants:
+        diags = [r["methods"][m]["diag"] for r in runs]
+        print(f"[{m}] q used: {sorted({d['q'] for d in diags})}")
+        if m == "svf":
+            cyc = np.array([[[f["cycle_err"] for f in it["facility"]] for it in d["per_iter"]]
+                            for d in diags])
+            clp = np.array([[[f["clipped"] for f in it["facility"]] for it in d["per_iter"]]
+                            for d in diags], dtype=float)
+            print("[svf] cycle error |E(D(h*)) - h*| per facility:", np.round(cyc.mean(axis=(0, 1)), 3))
+            print("[svf] share of decoded designs clipped to box:", np.round(clp.mean(axis=(0, 1)), 3))
 
     secs = {m: np.mean([r["methods"][m]["seconds"] for r in runs]) for m in methods}
     print("mean seconds per run:", {m: round(float(s), 1) for m, s in secs.items()})

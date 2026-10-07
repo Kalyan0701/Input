@@ -7,6 +7,7 @@ Run from hetero-input/cdsvf:
   python scripts/run_experiments.py --tag step1_nn --n-jobs 20          # 20 seeds, NN Task 1
   python scripts/run_experiments.py --tag step1_pca --task1 pca --n-jobs 20
   python scripts/run_experiments.py --tag nsweep --n-init 5 10 20 40 --n-jobs 20
+  python scripts/run_experiments.py --tag step1_pca_x --task1 pca --methods random indep svf svf_x --n-jobs 16
 """
 import argparse
 import os

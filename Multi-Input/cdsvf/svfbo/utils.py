@@ -6,7 +6,7 @@ import numpy as np
 
 # One independent random stream per purpose, so that e.g. adding a method
 # never changes the initial data or another method's noise.
-STREAMS = {"init": 0, "random": 1, "indep": 2, "svf": 3}
+STREAMS = {"init": 0, "random": 1, "indep": 2, "svf": 3, "svf_x": 4}
 
 
 def stream_rng(seed, name):
