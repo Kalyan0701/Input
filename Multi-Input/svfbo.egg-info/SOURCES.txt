@@ -1,0 +1,7 @@
+README.md
+pyproject.toml
+svfbo.egg-info/PKG-INFO
+svfbo.egg-info/SOURCES.txt
+svfbo.egg-info/dependency_links.txt
+svfbo.egg-info/requires.txt
+svfbo.egg-info/top_level.txt

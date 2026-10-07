@@ -1,0 +1,11 @@
+Metadata-Version: 2.4
+Name: svfbo
+Version: 0.1.0
+Summary: SVF-BO vs independent BO on heterogeneous facilities (First Step)
+Requires-Python: >=3.10
+Requires-Dist: numpy
+Requires-Dist: scipy
+Requires-Dist: scikit-learn
+Requires-Dist: torch
+Requires-Dist: matplotlib
+Requires-Dist: joblib
